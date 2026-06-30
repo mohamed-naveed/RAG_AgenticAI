@@ -35,7 +35,7 @@ async def ask_question(request: QueryRequest, db: Session = Depends(get_db)):
     query = request.question
     
     # 1. Route query
-    routed_agent_name = router_agent.route_query(query)
+    routed_agent_name, extracted_args = router_agent.route_query(query)
     
     # 2. Retrieve Context
     query_emb = get_embedding(query)
@@ -43,9 +43,25 @@ async def ask_question(request: QueryRequest, db: Session = Depends(get_db)):
     
     # 3. Generate response using specific agent
     agent_module = agent_map.get(routed_agent_name, policy_rag_agent)
-    response_text = agent_module.process(context_chunks, query)
+    response_text = agent_module.process(context_chunks, query, arguments=extracted_args)
     
-    # 4. Log to DB
+    # Try to parse agent's response as structured JSON, cleaning any markdown formatting
+    try:
+        import json
+        clean_text = response_text.strip()
+        if clean_text.startswith("```json"):
+            clean_text = clean_text[7:]
+        elif clean_text.startswith("```"):
+            clean_text = clean_text[3:]
+        if clean_text.endswith("```"):
+            clean_text = clean_text[:-3]
+        clean_text = clean_text.strip()
+        
+        parsed_response = json.loads(clean_text)
+    except Exception:
+        parsed_response = response_text
+        
+    # 4. Log to DB (save raw text response in SQL)
     log = QueryLog(
         question=query,
         agent_used=routed_agent_name,
@@ -56,6 +72,6 @@ async def ask_question(request: QueryRequest, db: Session = Depends(get_db)):
     
     return {
         "agent_used": routed_agent_name,
-        "response": response_text,
+        "response": parsed_response,
         "sources": [{"page": c.get("page_number"), "score": c.get("score")} for c in context_chunks]
     }
