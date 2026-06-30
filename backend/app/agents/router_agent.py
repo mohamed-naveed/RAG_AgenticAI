@@ -1,43 +1,84 @@
 from app.services.llm_service import query_llm
+import json
 
 def route_query(query: str) -> str:
     """
-    Classifies the user's query and routes it to the appropriate specialized agent using OpenRouter.
-    Returns the name of the agent to use.
+    Classifies the user's query and routes it to the appropriate specialized agent using OpenRouter Tool Calling.
     """
+    
+    # 1. Define the routing function tool schema
+    tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "route_to_agent",
+                "description": "Routes the user's query to the single most appropriate specialized insurance agent.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "agent_name": {
+                            "type": "string",
+                            "description": "The exact name of the agent chosen to handle the question.",
+                            "enum": [
+                                "policy_rag_agent",
+                                "claim_eligibility_agent",
+                                "benefit_calculator_agent",
+                                "exclusion_checker_agent",
+                                "grievance_agent",
+                                "checklist_agent"
+                            ]
+                        }
+                    },
+                    "required": ["agent_name"]
+                }
+            }
+        }
+    ]
+    
+    # Force the model to call this specific function
+    tool_choice = {
+        "type": "function",
+        "function": {"name": "route_to_agent"}
+    }
     
     prompt = f"""
     You are the Router Agent for an Insurance RAG system handling an Accident Only Blanket Benefits Policy.
-    Your job is to analyze the user's query and route it to ONE of the following specialized agents.
+    Analyze the user's query and decide which agent should handle it.
     
-    Agents:
-    1. policy_rag_agent: For general questions about policy definitions, scope of coverage, and basic terms.
-    2. claim_eligibility_agent: For questions about whether a specific scenario is covered (e.g., accident vs sickness, time limits, sponsored activities).
-    3. benefit_calculator_agent: For questions about specific numbers, maximum benefits, deductibles, coinsurance, and dollar amounts.
-    4. exclusion_checker_agent: For questions about things that are specifically NOT covered, exclusions, acts of war, intoxication, non-school sports.
-    5. grievance_agent: For questions about how to appeal a denied claim, grievance procedures, and expedited reviews.
-    6. checklist_agent: For questions about what documents are needed to file a claim, claim forms, notice of claim, and proof of loss.
+    Agent Descriptions:
+    - policy_rag_agent: General policy definitions, terminology, contacts, or basic terms.
+    - claim_eligibility_agent: Determines if a specific claim or scenario is covered (e.g. accident vs sickness, time limits, sponsored activities).
+    - benefit_calculator_agent: Handles pricing tables, copays, deductibles, coinsurance, and specific dollar limits.
+    - exclusion_checker_agent: Checks for things explicitly NOT covered (exclusions like acts of war, intoxication, non-school sports).
+    - grievance_agent: Explains the appeals process, informal/formal dispute resolution steps, and grievance timelines.
+    - checklist_agent: Tells the user exactly what documents are needed to file a claim.
     
     User Query: "{query}"
-    
-    Respond with ONLY the exact name of the agent (e.g., "policy_rag_agent"). Do not include any other text, reasoning, or markdown.
     """
     
     try:
-        response_text = query_llm(prompt)
-        agent_name = response_text.strip().lower()
+        # Query LLM with the tool schema
+        response = query_llm(prompt, tools=tools, tool_choice=tool_choice)
         
-        valid_agents = [
-            "policy_rag_agent", "claim_eligibility_agent", "benefit_calculator_agent",
-            "exclusion_checker_agent", "grievance_agent", "checklist_agent"
-        ]
-        
-        # Exact match or substring match fallback
-        for valid in valid_agents:
-            if valid in agent_name:
-                return valid
+        # Check if the LLM returned a structured tool call
+        if isinstance(response, dict) and 'tool_calls' in response:
+            tool_call = response['tool_calls'][0]
+            arguments = tool_call.get('function', {}).get('arguments', '{}')
+            
+            # Arguments can be a stringified JSON or a dict directly depending on client parsing
+            if isinstance(arguments, str):
+                parsed_args = json.loads(arguments)
+            else:
+                parsed_args = arguments
                 
-        return "Unknown"  # Default fallback if LLM hallucinates
+            routed_agent = parsed_args.get('agent_name', 'policy_rag_agent')
+            print(f"Router Agent dynamically selected tool: {routed_agent}")
+            return routed_agent
+            
+        # Fallback if no tool call was returned (e.g. error or string fallback)
+        print(f"Router Agent fallback (no tool call): {response}")
+        return "policy_rag_agent"
+        
     except Exception as e:
-        print(f"Error in Router Agent routing: {e}")
-        return "Unknown"  # Safe default
+        print(f"Error in Router Agent tool routing: {e}")
+        return "policy_rag_agent"

@@ -6,9 +6,9 @@ from dotenv import load_dotenv
 # Ensure env vars are loaded before reading GEMINI_API_KEY
 load_dotenv(override=True)
 
-def query_llm(prompt: str, system_prompt: str = None) -> str:
+def query_llm(prompt: str, system_prompt: str = None, tools: list = None, tool_choice: any = None) -> any:
     """
-    Core function that queries the OpenRouter API.
+    Core function that queries the OpenRouter API. Supports optional tools and tool_choice.
     """
     api_key = os.getenv("GEMINI_API_KEY")
     model_name = os.getenv("MODEL_NAME", "google/gemini-2.5-flash")
@@ -26,8 +26,13 @@ def query_llm(prompt: str, system_prompt: str = None) -> str:
     payload = {
         "model": model_name,
         "messages": messages,
-        "max_tokens": 1000  # Explicitly set max_tokens to avoid high credit pre-auth checks
+        "max_tokens": 1000  # Explicitly set max_tokens to avoid high credit check issues
     }
+    
+    if tools:
+        payload["tools"] = tools
+    if tool_choice:
+        payload["tool_choice"] = tool_choice
     
     try:
         response = requests.post(
@@ -38,7 +43,13 @@ def query_llm(prompt: str, system_prompt: str = None) -> str:
         )
         response.raise_for_status()
         data = response.json()
-        return data['choices'][0]['message']['content']
+        message = data['choices'][0]['message']
+        
+        # If the model chose to call a tool, return the whole message object containing 'tool_calls'
+        if 'tool_calls' in message and message['tool_calls']:
+            return message
+            
+        return message.get('content', '')
     except Exception as e:
         try:
             error_detail = response.json().get('error', {}).get('message', str(e))
