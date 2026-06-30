@@ -16,15 +16,5 @@ Input Details:
 
 Look up the 'Schedule of Benefits' section in the provided context for the specified benefit type (e.g. Emergency Room, Hospital Room & Board, Surgical, Physiotherapy, Prescription Drugs, etc.). Apply deductibles, coinsurance, and per-visit or per-injury limits.
 
-You MUST respond with a strictly formatted JSON object matching the schema below.
-Do not output any markdown formatting (like ```json), explanation, or other text outside the JSON block.
-
-JSON Schema:
-{{
-  "bill_amount": {bill_amount},
-  "limit_applied": 0.0,  // The benefit limit found in the policy (e.g. 185.00), or null if no limit
-  "estimated_payable_amount": 0.0, // The final estimated payable amount after applying coinsurance and deductibles
-  "reason": "One-sentence concise explanation of the calculation and limits applied, citing the page number"
-}}
-"""
+Provide a very brief 1-to-2 sentence direct conversational calculation of the payable benefit amount. Include citations to the source pages from the context."""
     return generate_agent_response(SYSTEM_PROMPT, context, query)

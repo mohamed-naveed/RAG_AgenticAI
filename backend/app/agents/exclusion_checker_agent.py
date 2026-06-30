@@ -14,13 +14,5 @@ Scenario Details Extracted:
 
 Check the 'Exclusions' and 'Additional Exclusions' sections of the policy in the provided context.
 
-You MUST respond with a strictly formatted JSON object matching the schema below.
-Do not output any markdown formatting (like ```json), explanation, or other text outside the JSON block.
-
-JSON Schema:
-{{
-  "status": "Excluded",  // Choose "Excluded", "Not Excluded", or "Manual Review Required"
-  "reason": "One-sentence concise explanation of why it is excluded or not, citing the page number"
-}}
-"""
+Provide a very brief 1-to-2 sentence direct conversational answer regarding whether the scenario is excluded. Include citations to the source pages from the context."""
     return generate_agent_response(SYSTEM_PROMPT, context, query)
