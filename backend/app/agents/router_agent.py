@@ -1,16 +1,8 @@
-import os
-import google.generativeai as genai
-
-# Assuming GEMINI_API_KEY is loaded in main.py via load_dotenv()
-api_key = os.getenv("GEMINI_API_KEY")
-if api_key:
-    genai.configure(api_key=api_key)
-
-model = genai.GenerativeModel(os.getenv("MODEL_NAME", "gemini-2.5-flash"))
+from app.services.llm_service import query_llm
 
 def route_query(query: str) -> str:
     """
-    Classifies the user's query and routes it to the appropriate specialized agent.
+    Classifies the user's query and routes it to the appropriate specialized agent using OpenRouter.
     Returns the name of the agent to use.
     """
     
@@ -32,8 +24,8 @@ def route_query(query: str) -> str:
     """
     
     try:
-        response = model.generate_content(prompt)
-        agent_name = response.text.strip().lower()
+        response_text = query_llm(prompt)
+        agent_name = response_text.strip().lower()
         
         valid_agents = [
             "policy_rag_agent", "claim_eligibility_agent", "benefit_calculator_agent",
@@ -45,7 +37,7 @@ def route_query(query: str) -> str:
             if valid in agent_name:
                 return valid
                 
-        return "policy_rag_agent"  # Default fallback if LLM hallucinates
+        return "Unknown"  # Default fallback if LLM hallucinates
     except Exception as e:
-        print(f"Error in Supervisor Agent routing: {e}")
-        return "policy_rag_agent"  # Safe default
+        print(f"Error in Router Agent routing: {e}")
+        return "Unknown"  # Safe default
