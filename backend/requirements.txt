@@ -1,0 +1,13 @@
+fastapi
+uvicorn
+pydantic
+python-dotenv
+sqlalchemy
+pymysql
+google-generativeai
+sentence-transformers
+faiss-cpu
+rank-bm25
+pymupdf
+langchain
+python-multipart
