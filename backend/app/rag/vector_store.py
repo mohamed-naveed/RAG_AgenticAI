@@ -13,9 +13,14 @@ class HybridRetriever:
         self.documents = []  # List of dicts with 'text', 'metadata'
         self.tokenized_corpus = []
         
-        os.makedirs(save_dir, exist_ok=True)
-        self.faiss_path = os.path.join(save_dir, "index.faiss")
-        self.docs_path = os.path.join(save_dir, "documents.pkl")
+        # Resolve directory to ensure absolute paths relative to backend root
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        backend_dir = os.path.abspath(os.path.join(base_dir, "..", ".."))
+        abs_save_dir = os.path.join(backend_dir, save_dir)
+        
+        os.makedirs(abs_save_dir, exist_ok=True)
+        self.faiss_path = os.path.join(abs_save_dir, "index.faiss")
+        self.docs_path = os.path.join(abs_save_dir, "documents.pkl")
         
     def add_documents(self, docs, embeddings):
         """

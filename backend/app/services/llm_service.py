@@ -20,13 +20,16 @@ def query_llm(prompt: str, system_prompt: str = None, tools: list = None, tool_c
     
     messages = []
     if system_prompt:
-        messages.append({"role": "system", "content": system_prompt})
-    messages.append({"role": "user", "content": prompt})
+        user_content = f"{system_prompt}\n\n{prompt}"
+    else:
+        user_content = prompt
+    messages.append({"role": "user", "content": user_content})
     
     payload = {
         "model": model_name,
         "messages": messages,
-        "max_tokens": 1000  # Explicitly set max_tokens to avoid high credit check issues
+        "max_tokens": 1000,  # Explicitly set max_tokens to avoid high credit check issues
+        "temperature": 0.0  # Ensure highly deterministic, factual answers for QA
     }
     
     if tools:
