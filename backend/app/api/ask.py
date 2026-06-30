@@ -56,7 +56,7 @@ async def ask_question(request: QueryRequest, db: Session = Depends(get_db)):
     
     # 2. Retrieve Context
     query_emb = get_embedding(query)
-    context_chunks = retriever_instance.retrieve(query, query_emb, top_k=5)
+    context_chunks = retriever_instance.retrieve(query, query_emb, top_k=8)
     
     # 3. Generate response using specific agent
     agent_module = agent_map.get(routed_agent_name, policy_rag_agent)
