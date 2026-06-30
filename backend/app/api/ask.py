@@ -37,6 +37,23 @@ async def ask_question(request: QueryRequest, db: Session = Depends(get_db)):
     # 1. Route query
     routed_agent_name, extracted_args = router_agent.route_query(query)
     
+    if routed_agent_name == "Unknown":
+        log = QueryLog(
+            question=query,
+            agent_used="Unknown",
+            response="This question is not related to the insurance policy."
+        )
+        db.add(log)
+        db.commit()
+        return {
+            "agent_used": "Unknown",
+            "response": {
+                "status": "unrelated",
+                "message": "This question is not related to the insurance policy."
+            },
+            "sources": []
+        }
+    
     # 2. Retrieve Context
     query_emb = get_embedding(query)
     context_chunks = retriever_instance.retrieve(query, query_emb, top_k=5)

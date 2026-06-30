@@ -157,6 +157,8 @@ def route_query(query: str) -> tuple[str, dict]:
     You are the Router Agent. You inspect user queries and route them to the most appropriate specialized agent tool.
     Extract the necessary arguments for the selected tool if they are present in the user query.
     
+    CRITICAL RULE: If the user's query is completely unrelated to the insurance policy (e.g. off-topic questions, general knowledge, greetings, chitchat, jokes, or off-topic queries), DO NOT call any tool. Simply ignore the tools.
+    
     User Query: "{query}"
     """
     
@@ -178,8 +180,8 @@ def route_query(query: str) -> tuple[str, dict]:
             return agent_name, parsed_args
             
         print(f"Router Agent fallback (no tool call): {response}")
-        return "policy_rag_agent", {"query": query}
+        return "Unknown", {"query": query}
         
     except Exception as e:
         print(f"Error in Router Agent tool routing: {e}")
-        return "policy_rag_agent", {"query": query}
+        return "Unknown", {"query": query}
